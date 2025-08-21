@@ -1648,7 +1648,7 @@ DOC_STORE_CONFIG = {
     'socketTimeoutMS': 6000,
     'connectTimeoutMS': 2000,  # default is 20000, I believe raises pymongo.errors.ConnectionFailure
     # Not setting waitQueueTimeoutMS and waitQueueMultiple since pymongo defaults to nobody being allowed to wait
-    'auth_source': None,
+    'auth_source': 'edxapp',
     'read_preference': 'SECONDARY_PREFERRED'
 }
 
@@ -1663,7 +1663,7 @@ CONTENTSTORE = {
         'port': 27017,
         'user': 'edxapp',
         'ssl': False,
-        'auth_source': None
+        'auth_source': 'edxapp'
     },
     'ADDITIONAL_OPTIONS': {},
     'DOC_STORE_CONFIG': DOC_STORE_CONFIG
