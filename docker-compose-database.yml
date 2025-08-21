@@ -1,0 +1,131 @@
+# Docker Compose cho edX Database Setup
+# Bao gồm MySQL và MongoDB với cấu hình phù hợp cho edX platform
+
+version: '3.8'
+
+services:
+  # MySQL Database cho edX
+  mysql:
+    image: mysql:8.0
+    container_name: edx_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: edxapp
+      MYSQL_USER: edxapp001
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      # Persistent data
+      - mysql_data:/var/lib/mysql
+      # Custom MySQL configuration
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      # Initialization scripts
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --sql_mode=STRICT_TRANS_TABLES
+    networks:
+      - edx_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB cho edX ModuleStore và ContentStore
+  mongodb:
+    image: mongo:4.4
+    container_name: edx_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: edxapp
+    ports:
+      - "27017:27017"
+    volumes:
+      # Persistent data
+      - mongodb_data:/data/db
+      # MongoDB configuration
+      - ./mongodb/mongod.conf:/etc/mongod.conf
+      # Initialization scripts
+      - ./mongodb/init:/docker-entrypoint-initdb.d
+    networks:
+      - edx_network
+    healthcheck:
+      test: echo 'db.runCommand("ismaster").ismaster' | mongo admin --host localhost -u admin -p rootpassword --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis cho caching (tùy chọn)
+  redis:
+    image: redis:6.2-alpine
+    container_name: edx_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf
+    command: redis-server /etc/redis/redis.conf
+    networks:
+      - edx_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch cho search (tùy chọn)
+  elasticsearch:
+    image: elasticsearch:8.8.2
+    container_name: edx_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - edx_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Memcached cho caching
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: edx_memcached
+    restart: unless-stopped
+    ports:
+      - "11211:11211"
+    command: memcached -m 256
+    networks:
+      - edx_network
+
+# Volumes cho persistent data
+volumes:
+  mysql_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+# Network cho các services
+networks:
+  edx_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

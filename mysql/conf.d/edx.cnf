@@ -1,0 +1,40 @@
+[mysqld]
+# Basic MySQL configuration for edX
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+authentication_policy = mysql_native_password
+
+# Performance tuning
+innodb_buffer_pool_size = 256M
+innodb_redo_log_capacity = 134217728
+innodb_flush_log_at_trx_commit = 1
+innodb_lock_wait_timeout = 120
+
+# Connection settings
+max_connections = 200
+max_connect_errors = 100
+wait_timeout = 600
+interactive_timeout = 600
+
+# Query cache is deprecated in MySQL 8.0, using alternative caching
+# query_cache_type and query_cache_size are removed
+host_cache_size = 0
+
+# Logging
+slow_query_log = 1
+slow_query_log_file = /var/lib/mysql/slow.log
+long_query_time = 2
+
+# SQL Mode for edX compatibility
+sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
+
+# Binary logging
+server-id = 1
+log-bin = mysql-bin
+# binlog_format is deprecated, MySQL 8.0 uses ROW by default
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4
